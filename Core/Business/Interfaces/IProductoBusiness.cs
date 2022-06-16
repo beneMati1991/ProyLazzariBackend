@@ -1,0 +1,22 @@
+﻿using Abstractions;
+using Core.Models.DTOs;
+using Core.Models.MejoresOpcionesVVM;
+using Entities;
+using FluentValidation.Results;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Core.Business.Interfaces
+{
+    public interface IProductoBusiness
+    {
+        Task<IEnumerable<ProductoDtoGetAllResponse>> GetAllProductos();
+        IEnumerable<ProductoDtoGetAllResponse> GetAllProductosPaginado(string name, IPaginationFilter filter);
+        Task<ProductoDtoGetAllResponse> GetProductoPorId(int productoId);
+        Task<int> CountProductos(string nombre);
+        Task<MejoresOpcionesResponse> GetMejoresOpciones(MejoresOpcionesProductosRequest request);
+    }
+}
