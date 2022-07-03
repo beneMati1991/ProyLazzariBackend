@@ -9,7 +9,7 @@ namespace Core.Models.MejoresOpcionesVVM
 {
     public class MejoresOpcionesProductosRequest
     {
-        public List<ProductoViewModel> Productos { get; set; }
+        public List<int> ProductosId { get; set; }
         public double DistanciaMaxima { get; set; } 
         public Ubicacion UbicacionUsuario { get; set; }  
     }

@@ -31,38 +31,59 @@ namespace Core.Business
             _validatorProducto = validatorProducto;
         }
 
-        public async Task<IEnumerable<ProductoDtoGetAllResponse>> GetAllProductos()
+        public async Task<IEnumerable<ProductoDtoGetAllResponse>> GetAllProductos(string nombre)
         {
-            var productos = _repository.GetQuery<Producto>(p => p.UnidadMedida).Where(p 
-                =>p.Activo.Equals(true));
+            var response = new List<ProductoDtoGetAllResponse>();
 
-            var productosComercio = new List<ProductoDtoGetAllResponse>();
+            var productos = await _repository.GetWhere<Producto>(p =>
+                 p.Nombre.ToLower().Contains(nombre.ToLower()) ||
+                 p.Marca.ToLower().Contains(nombre.ToLower()) ||
+                 p.Detalle.ToLower().Contains(nombre.ToLower()));
 
             foreach (var producto in productos)
             {
+                var unidadMedida = await _repository.GetById<UnidadDeMedida>(producto.UnidadMedidaId);
+
                 var productoResponse = _mapper.Map<ProductoDtoGetAllResponse>(producto);
 
-                productoResponse.UnidadDeMedida = producto.UnidadMedida?.Abreviatura;
+                productoResponse.UnidadDeMedida = unidadMedida?.Abreviatura;
 
-                productosComercio.Add(productoResponse);
+                response.Add(productoResponse);
             }
-            return productosComercio;
+
+            return response.GroupBy(x => new { x.Nombre, x.Marca }).Select(x => x.First());
         }
 
-      
+
         public IEnumerable<ProductoDtoGetAllResponse> GetAllProductosPaginado(string nombre, IPaginationFilter filter)
         {
             var response = new List<ProductoDtoGetAllResponse>();
 
-            var productos = _repository.GetQueryPaginado<Producto>(p =>
-            p.Activo.Equals(true), filter, p => p.UnidadMedida);
+            var productos = _repository.GetQuery<Producto>(p =>
+               p.Nombre.ToLower().Contains(nombre.ToLower()) ||
+               p.Marca.ToLower().Contains(nombre.ToLower()) ||
+               p.Detalle.ToLower().Contains(nombre.ToLower()));
 
-            if(!string.IsNullOrEmpty(nombre))
-            {
-                productos = _repository.GetQueryPaginado<Producto>(p =>
-            p.Nombre.ToLower().Contains(nombre.ToLower()) && p.Activo.Equals(true),
-            filter, p => p.UnidadMedida);
-            }
+
+
+            /*
+                       if (!string.IsNullOrEmpty(nombre))
+                       {
+                           productos = _repository.GetQuery<Producto>(p =>
+                           p.Nombre.ToLower().Contains(nombre.ToLower()) ||
+                           p.Marca.ToLower().Contains(nombre.ToLower()) ||
+                           p.Detalle.ToLower().Contains(nombre.ToLower())
+                           && p.Activo.Equals(true), p => p.UnidadMedida);
+                       }
+                      if(filter is not null)
+                       {
+                           productos = _repository.GetQueryPaginado<Producto>(p =>
+                           p.Nombre.ToLower().Contains(nombre.ToLower()) ||
+                           p.Marca.ToLower().Contains(nombre.ToLower()) ||
+                           p.Detalle.ToLower().Contains(nombre.ToLower())
+                           && p.Activo.Equals(true),
+                           filter, p => p.UnidadMedida);
+                       }*/
 
             foreach (var producto in productos)
             {
@@ -72,6 +93,7 @@ namespace Core.Business
 
                 response.Add(productoResponse);
             }
+
             return response.Distinct();
         }
 
@@ -79,10 +101,10 @@ namespace Core.Business
         public async Task<ProductoDtoGetAllResponse> GetProductoPorId(int productoId)
         {
             var producto = await _repository.GetById<Producto>(productoId);
-            
-            if (producto is not null && producto.Activo.Equals(true)) 
+
+            if (producto is not null && producto.Activo.Equals(true))
             {
-               var unidadMedida = await _repository.GetById<UnidadDeMedida>(producto.UnidadMedidaId);
+                var unidadMedida = await _repository.GetById<UnidadDeMedida>(producto.UnidadMedidaId);
 
                 var productoResponse = _mapper.Map<ProductoDtoGetAllResponse>(producto);
 
@@ -108,69 +130,98 @@ namespace Core.Business
         }
 
         /// <summary>
-        /// Método que recibe una lista de productos view model y devuelve un listado de productos
+        /// Método para calcular la distancia de un comercio desde la ubicación del usuario
+        /// </summary>
+        /// <param name="comercio"></param>
+        /// <param name="ubicacionUsuario"></param>
+        /// <returns></returns>
+        private double CalcularDistanciaComercio(Domicilio domicilioComercio, Ubicacion ubicacionUsuario)
+        {
+            var ubicacionComercio = new Ubicacion
+            {
+                lat = domicilioComercio.Latitud,
+                lon = domicilioComercio.Longitud
+            };
+
+            return Calcular.DistanciaEntreDosPuntosEnKm(ubicacionUsuario, ubicacionComercio);
+        }
+
+        /// <summary>
+        /// Método que recibe una lista de Id de productos y devuelve un listado de productos
         /// </summary>
         /// <param name="productos"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<Producto>> BuscarPorNombre(List<ProductoViewModel> productos) 
+        private async Task<IEnumerable<Producto>> BuscarProductos(List<int> productosId)
         {
             var productosResponse = new List<Producto>();
 
-            foreach (var producto in productos)
+            foreach (var id in productosId)
             {
-                var resultadoBusquedaProducto = await _repository.GetWhere<Producto>(p =>
-                p.Nombre.ToLower().Contains(producto.Nombre.ToLower()));
+                var producto = await _repository.GetById<Producto>(id);
 
-                foreach (var resultado in resultadoBusquedaProducto)
+                if (producto is not null)
                 {
-                    productosResponse.Add(resultado);
+                    var resultadoBusquedaProducto = await _repository.GetWhere<Producto>(x =>
+                    x.Nombre.ToLower().Contains(producto.Nombre.ToLower()));
+
+                    resultadoBusquedaProducto = resultadoBusquedaProducto.Where(x => x.Marca.ToLower()
+                    .Contains(producto.Marca.ToLower()));
+
+                    foreach (var resultado in resultadoBusquedaProducto)
+                    {
+                        var unidadMedida = await _repository.GetById<UnidadDeMedida>(resultado.UnidadMedidaId);
+                        resultado.UnidadMedida = unidadMedida;
+
+                        productosResponse.Add(resultado);
+                    }
                 }
+
             }
 
             return productosResponse;
         }
 
-        private async Task<IEnumerable<Producto>> FiltrarProductosPorDistanciaComercio (List<ProductoViewModel> productosVM, Ubicacion ubicacionUsuario, double distanciaMaxima)
+        /// <summary>
+        /// Método que devuelve los comercios dentro de la distancia máxima establecida
+        /// </summary>
+        /// <param name="ubicacionUsuario"></param>
+        /// <param name="distanciaMaxima"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<Comercio>> FiltrarComercioPorDistancia(Ubicacion ubicacionUsuario, double distanciaMaxima)
         {
-            var productos = await BuscarPorNombre(productosVM);
+            var comercios = await _repository.GetAll<Comercio>();
 
-            var productosResponse = new List<Producto>();
+            var comerciosResponse = new List<Comercio>();
 
-            foreach (var producto in productos)
+            foreach (var comercio in comercios)
             {
-                var ubicacionComercio = new Ubicacion
-                {
-                    lat = producto.Comercio.Domicilio.Latitud,
-                    lon = producto.Comercio.Domicilio.Longitud
-                };
+                var domicilioComercio = await _repository.GetById<Domicilio>(comercio.DomicilioId);
 
-                var distanciaComercio = Calcular.DistanciaEntreDosPuntosEnKm(ubicacionUsuario, ubicacionComercio);
+                var distanciaComercio = CalcularDistanciaComercio(domicilioComercio, ubicacionUsuario);
 
                 if (distanciaComercio <= distanciaMaxima)
                 {
-                    productosResponse.Add(producto);
+                    comerciosResponse.Add(comercio);
                 }
             }
-
-            return productosResponse;
+            return comerciosResponse;
         }
 
-        public async Task<MejoresOpcionesResponse> GetMejoresOpciones(MejoresOpcionesProductosRequest request)
+        /// <summary>
+        /// Servicio que devuelve las mejores opciones de carrito ordenado de menor a mayor según distancia máxima de búsqueda
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<ComercioMejorOpcionViewModel>> GetMejoresOpciones(MejoresOpcionesProductosRequest request, string orderby)
         {
-            /*
-            MejoresOpcionesResponse response = new MejoresOpcionesResponse();
 
-            var comercios = new List<Comercio>();
+            var response = new List<ComercioMejorOpcionViewModel>();
 
-            var productos = await FiltrarProductosPorDistanciaComercio(request.Productos, request.UbicacionUsuario, request.DistanciaMaxima);
+            var productos = await BuscarProductos(request.ProductosId);
 
-            foreach(var producto in productos)
-            {
-                comercios.Add(producto.Comercio);
-            }
+            var comercios = await FiltrarComercioPorDistancia(request.UbicacionUsuario, request.DistanciaMaxima);
 
-
-            foreach(var comercio in comercios)
+            foreach (var comercio in comercios)
             {
                 var productosComercio = productos.Where(p => p.ComercioId.Equals(comercio.Id))
                     .Select(p => new ProductoViewModel
@@ -178,22 +229,70 @@ namespace Core.Business
                         Id = p.Id,
                         Nombre = p.Nombre,
                         Presentacion = p.UnidadMedida.Abreviatura,
-                        Detalle = p.Detalle
-                    });
+                        Detalle = p.Detalle,
+                        Precio = Convert.ToDouble(p.Precio)
+                    }).ToList();
+
+                if (productosComercio.Count > request.ProductosId.Count)
+                {
+                    productosComercio = productosComercio.GroupBy(x => x.Nombre).Select(x => x.First()).ToList();
+                }
+
+                var precioTotal = productosComercio.Select(x => x.Precio).Sum();
+
+                var domicilioComercio = await _repository.GetById<Domicilio>(comercio.DomicilioId);
+
+                var distancia = CalcularDistanciaComercio(domicilioComercio, request.UbicacionUsuario);
 
                 var comercioResponse = new ComercioMejorOpcionViewModel
                 {
-                    Productos = comercio.Productos.w
+                    Productos = productosComercio.ToList(),
+                    Nombre = comercio.Nombre,
+                    Distancia = distancia,
+                    Calle = comercio.Domicilio.Calle,
+                    Altura = comercio.Domicilio.Altura,
+                    PrecioTotal = Convert.ToDouble(precioTotal),
+                    CarritoCompleto = true
+                };
+
+                if (productosComercio.Count < request.ProductosId.Count)
+                {
+                    comercioResponse.CarritoCompleto = false;
                 }
-                response.Comercios.Add
-            } */
 
-            throw new NotImplementedException();
+                if (comercioResponse.Productos.Any())
+                {
+                    response.Add(comercioResponse);
+                }
 
+            }
+
+            if (orderby != null)
+            {
+                switch (orderby)
+                {
+                    case "precio":
+                        response = response.OrderBy(x => x.PrecioTotal).ToList();
+                        break;
+                    case "distancia":
+                        response = response.OrderBy(x => x.Distancia).ToList();
+                        break;
+                    case "carrito":
+                        response = response.Where(x => x.CarritoCompleto).ToList();
+                        break;
+                }
+            }
+
+            if(orderby is null)
+            {
+                response = response.OrderBy(x => x.PrecioTotal).ToList();
+            }
+
+            return response;
         }
 
 
-        
+
 
     }
 }

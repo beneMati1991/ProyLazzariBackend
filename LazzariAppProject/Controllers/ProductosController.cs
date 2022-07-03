@@ -2,6 +2,7 @@
 using Core.Helper;
 using Core.Helper.Autenticacion;
 using Core.Helper.Paginacion;
+using Core.Models;
 using Core.Models.MejoresOpcionesVVM;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -11,6 +12,7 @@ using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace LazzariAppProject.Controllers
@@ -37,9 +39,9 @@ namespace LazzariAppProject.Controllers
             var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
             
             var route = Request.Path.Value;
-            
-            var productos = _business.GetAllProductosPaginado(nombre, validFilter);
-            
+
+            var productos = await _business.GetAllProductos(nombre); 
+
             var totalRecords = await _business.CountProductos(nombre);
                       
             if (!string.IsNullOrEmpty(nombre))
@@ -82,14 +84,21 @@ namespace LazzariAppProject.Controllers
             else return NotFound();
         }
 
-
+        [AllowAnonymous]
         [HttpPost]
-        public async Task<IActionResult> GetMejorOpcionProductos([FromBody] MejoresOpcionesProductosRequest request)
+        [Route("lazzari")]
+        public async Task<IActionResult> GetMejorOpcionProductos([FromBody] MejoresOpcionesProductosRequest request, string orderby)
         {
-            //order = precio || order = distancia
-            throw new NotImplementedException();
+            var result = await _business.GetMejoresOpciones(request, orderby);
+
+            return Ok(new GenericResponse
+            {
+                StatusCode = HttpStatusCode.OK.GetHashCode(),
+                Data = result,
+                Message = null
+            });
         }
 
-       
+
     }
 }

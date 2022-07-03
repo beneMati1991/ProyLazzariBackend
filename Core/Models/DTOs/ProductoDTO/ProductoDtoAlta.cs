@@ -24,7 +24,7 @@ namespace Core.Models.DTOs
         [Required]
         public decimal Precio { get; set; }
 
-        public int Cantidad { get; set; }
+        public int? Cantidad { get; set; }
 
         public string Imagen { get; set; }
 

@@ -13,10 +13,11 @@ namespace Core.Business.Interfaces
 {
     public interface IProductoBusiness
     {
-        Task<IEnumerable<ProductoDtoGetAllResponse>> GetAllProductos();
+        Task<IEnumerable<ProductoDtoGetAllResponse>> GetAllProductos(string nombre);
         IEnumerable<ProductoDtoGetAllResponse> GetAllProductosPaginado(string name, IPaginationFilter filter);
         Task<ProductoDtoGetAllResponse> GetProductoPorId(int productoId);
         Task<int> CountProductos(string nombre);
-        Task<MejoresOpcionesResponse> GetMejoresOpciones(MejoresOpcionesProductosRequest request);
+        Task<IEnumerable<ComercioMejorOpcionViewModel>> GetMejoresOpciones(MejoresOpcionesProductosRequest request, string orderby);
+
     }
 }

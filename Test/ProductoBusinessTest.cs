@@ -78,7 +78,7 @@ namespace Test
             var _business = new ProductoBusiness(mockRepo.Object,
                 mapper, mockValidator.Object);
 
-            var allProducts = _business.GetAllProductos();
+            var allProducts = _business.GetAllProductos("");
 
             Assert.AreEqual(0,allProducts.Result.Count());
         }
@@ -92,7 +92,7 @@ namespace Test
             var _business = new ProductoBusiness(mockRepository.Object,
                 mapper, mockValidator.Object);
 
-            var allProducts = _business.GetAllProductos();
+            var allProducts = _business.GetAllProductos("");
 
             Assert.IsNotNull(allProducts.Result);
             Assert.AreEqual(productos.Count, allProducts.Result.Count());

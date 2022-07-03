@@ -14,12 +14,12 @@ namespace Core.Helper.Paginacion
         public PaginationFilter()
         {
             this.PageNumber = 1;
-            this.PageSize = 20;
+            this.PageSize = 300;
         }
         public PaginationFilter(int pageNumber, int pageSize)
         {
             this.PageNumber = pageNumber < 1 ? 1 : pageNumber;
-            this.PageSize = pageSize > 20 ? 20 : pageSize;
+            this.PageSize = pageSize > 300 ? 300 : pageSize;
         }
     }
 }

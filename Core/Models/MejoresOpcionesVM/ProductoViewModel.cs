@@ -13,7 +13,7 @@ namespace Core.Models.MejoresOpcionesVVM
         public string Nombre { get; set; }
         public string Presentacion { get; set; }
         public string Detalle { get; set; }
-        public decimal Precio { get; set; }
+        public double Precio { get; set; }
 
     }
 }

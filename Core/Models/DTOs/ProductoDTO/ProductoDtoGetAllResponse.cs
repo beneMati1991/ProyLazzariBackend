@@ -17,7 +17,6 @@ namespace Core.Models.DTOs
         public decimal Precio { get; set; }
         public int Cantidad { get; set; }
         public string Imagen { get; set; }
-        public int SucursalId { get; set; }
 
         public static explicit operator ProductoDtoGetAllResponse(Producto producto) 
         {

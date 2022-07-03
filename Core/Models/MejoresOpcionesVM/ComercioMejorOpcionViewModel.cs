@@ -8,11 +8,13 @@ namespace Core.Models.MejoresOpcionesVVM
 {
     public class ComercioMejorOpcionViewModel
     {
-        public List<ProductoViewModel> Productos { get; set; }
         public string Nombre { get; set; }
-        public string Distancia { get; set; }
         public string Calle { get; set; }
         public long Altura { get; set; }
+        public double Distancia { get; set; }
         public double PrecioTotal { get; set; }
+        public bool CarritoCompleto { get; set; }
+        public List<ProductoViewModel> Productos { get; set; }
+      
     }
 }
